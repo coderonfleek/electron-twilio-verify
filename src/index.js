@@ -49,16 +49,12 @@ app.on('activate', () => {
 
 let userFilePath = path.join(__dirname, 'user.json');
 ipcMain.handle('save-user-data', (event, ...args) => {
-    
   fs.writeFileSync(userFilePath, args[0]);
-  
 })
 
 ipcMain.on('get-user-data', (event, arg) => {
-  fs.readFile(userFilePath, 'utf8', function(err, data){ 
-      
+  fs.readFile(userFilePath, 'utf8', function(err, data){     
     event.reply('user-data', data)
-    
   }); 
   
 })
