@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Hello World!</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+    
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <a class="navbar-brand" href="/#">Welcome to Verify</a>
+      <button
+          class="navbar-toggler"
+          type="button"
+          data-toggle="collapse"
+          data-target="#navbarText"
+          aria-controls="navbarText"
+          aria-expanded="false"
+          aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon" />
+      </button>
+      
+    </nav>
+
+    <div id="app">
+      <div class="container">
+        <div class="row" v-if="!authenticated">
+            <div class="col-md-6 offset-md-3 mt-5">
+              <div class="card">
+                <div class="card-header bg-primary text-white">
+                  Login with Phone Number
+                </div>
+
+                <div class="card-body">
+                  <form>
+                    <div v-if="!verification_started">
+                      <div class="form-group">
+                        <label>Enter Phone Number</label>
+                        <input type="phone" v-model="phonenumber" class="form-control">
+                        <small class="form-text text-muted">We'll never share your phone number with anyone else.</small>
+                      </div>
+                      <button type="button" @click="getVerificationCode()" class="btn btn-primary" :disabled="fetching_code">
+                        {{ fetching_code? "Processing" : "Get Verification Code"}}
+                      </button>
+                    </div>
+                    <div v-else>
+                      <div class="form-group">
+                        <label>Enter Verification Code</label>
+                        <input v-model="code" class="form-control">
+                        
+                      </div>
+                      <button type="button" @click="checkVerification()" class="btn btn-primary" :disabled="checking_code">
+                        {{ checking_code? "Processing" : "Login"}}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+                
+              </div>
+              
+              
+            </div>
+        </div>
+
+        <div class="row" v-else>
+          <div class="col-md-8 offset-md-2 mt-5">
+            <div class="jumbotron">
+              <h1 class="display-4">Hello, User!</h1>
+              <p class="lead">You have successfully logged into your profile.</p>
+              <hr class="my-4">
+              <p>If you're ready to log out of your profile, you can use the button below.</p>
+              <button class="btn btn-primary btn-lg" type="button">Log Out</button>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </body>
+
+  <script>
+    const twilio = require('twilio');
+    twilio_client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
+    console.log(twilio_client);
+
+    let app = new Vue({
+        el: '#app',
+        data : {
+          authenticated: false,
+          verification_started : false,
+          phonenumber : null,
+          fetching_code : false,
+          code : null,
+          checking_code : false
+        },
+        methods : {
+          async getVerificationCode(){
+
+            if(this.phonenumber){
+
+              this.fetching_code = true;
+              try {
+
+                let verification = await twilio_client.verify.services(process.env.VERIFY_SERVICE_ID)
+                  .verifications
+                  .create({to: this.phonenumber, channel: 'sms'})
+
+                  console.log(verification);
+
+                  if(verification.status == "pending"){
+                    this.verification_started = true;
+                  }
+
+                  this.fetching_code = false;
+                  
+              } catch (error) {
+                this.fetching_code = false;
+                alert("Could not request Verification")
+              }
+             
+            }
+          },
+
+          async checkVerification() {
+
+            if(this.code){
+              this.checking_code = true;
+              try {
+                let check = await twilio_client.verify.services(process.env.VERIFY_SERVICE_ID)
+                .verificationChecks
+                .create({to: this.phonenumber, code: this.code})
+
+                if(check.status == "approved"){
+                  this.authenticated = true;
+                }
+
+                this.checking_code = false;
+              } catch (error) {
+                this.checking_code = false;
+                alert("Could not verify code")
+              }
+              
+            }
+          }
+        }
+      })
+  </script>
+</html>
