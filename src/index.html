@@ -70,7 +70,7 @@
               <p class="lead">You have successfully logged into your profile.</p>
               <hr class="my-4">
               <p>If you're ready to log out of your profile, you can use the button below.</p>
-              <button class="btn btn-primary btn-lg" type="button">Log Out</button>
+              <button class="btn btn-primary btn-lg" @click="logout()" type="button">Log Out</button>
             </div>
           </div>
           
@@ -81,8 +81,10 @@
 
   <script>
     const twilio = require('twilio');
+    const { ipcRenderer } = require('electron');
     twilio_client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
     console.log(twilio_client);
+
 
     let app = new Vue({
         el: '#app',
@@ -94,6 +96,18 @@
           code : null,
           checking_code : false
         },
+        created(){
+
+          ipcRenderer.on('user-data', (event, userData) => {
+            console.log(userData) 
+            if(userData && JSON.parse(userData).status == "approved"){
+              this.authenticated = true;
+            }
+          })
+
+          ipcRenderer.send('get-user-data', '')
+        },
+
         methods : {
           async getVerificationCode(){
 
@@ -133,6 +147,8 @@
 
                 if(check.status == "approved"){
                   this.authenticated = true;
+
+                  ipcRenderer.invoke('save-user-data', JSON.stringify(check))
                 }
 
                 this.checking_code = false;
@@ -142,6 +158,14 @@
               }
               
             }
+          },
+
+          logout () {
+            ipcRenderer.invoke('save-user-data', JSON.stringify({}))
+            this.authenticated = false;
+            this.verification_started = false;
+            this.phonenumber = null;
+            this.code = null;
           }
         }
       })

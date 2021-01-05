@@ -1,6 +1,7 @@
 require("dotenv").config();
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
@@ -45,6 +46,22 @@ app.on('activate', () => {
     createWindow();
   }
 });
+
+let userFilePath = path.join(__dirname, 'user.json');
+ipcMain.handle('save-user-data', (event, ...args) => {
+    
+  fs.writeFileSync(userFilePath, args[0]);
+  
+})
+
+ipcMain.on('get-user-data', (event, arg) => {
+  fs.readFile(userFilePath, 'utf8', function(err, data){ 
+      
+    event.reply('user-data', data)
+    
+  }); 
+  
+})
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
